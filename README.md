@@ -56,11 +56,5 @@ This version is prepared for Progress 3 submission and GitHub Pages. It uses onl
 4. Select **Branch: main** and **Folder: /root**.
 5. Save and open the generated GitHub Pages link.
 
-## Progress 3 Submission Links
 
-Paste your final links here before submitting:
 
-- GitHub Repository: `https://github.com/akii2005/AD1_Hoppr_Progress3.git`
-- GitHub Pages Live UI: `https://akii2005.github.io/AD1_Hoppr_Progress3/`
-- Video Link: `https://drive.google.com/file/d/1WtZBM5CB0G5-5VU_3qCzx6PVRu3n-pbt/view?usp=sharing`
-- Trello Board Link: `https://trello.com/invite/b/69dd8f20eab6b6a119a6acee/ATTI2b025cbf52666f96b164ab163e45955c516DCFCA/alphahopper`

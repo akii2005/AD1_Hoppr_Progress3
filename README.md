@@ -42,19 +42,6 @@ This version is prepared for Progress 3 submission and GitHub Pages. It uses onl
 | Admin Monitoring, Verification and Reports | [`js/admin.js`](js/admin.js) |
 | Visual Design and Responsive UI | [`css/styles.css`](css/styles.css) |
 
-## How to Upload to GitHub Pages
-
-1. Create a GitHub repository.
-2. Upload the folder contents directly so the repository root contains:
-   - `index.html`
-   - `README.md`
-   - `assets/`
-   - `css/`
-   - `js/`
-   - `docs/`
-3. Go to **Settings > Pages**.
-4. Select **Branch: main** and **Folder: /root**.
-5. Save and open the generated GitHub Pages link.
 
 
 

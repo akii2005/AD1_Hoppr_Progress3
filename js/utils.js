@@ -17,6 +17,7 @@
     driverJobs: JSON.parse(JSON.stringify(window.HopprData.sampleJobs)),
     acceptedJobs: [],
     adminUsers: JSON.parse(JSON.stringify(window.HopprData.users)),
+    savedCards: JSON.parse(JSON.stringify(window.HopprData.savedCards || [])),
     notifications: [
       'Welcome to Hoppr verified campus services.',
       'Prototype includes ride, parcel, food, driver and admin flows.'
@@ -105,6 +106,60 @@
         return '<option value="' + escapeHTML(value) + '"' + isSelected + '>' + escapeHTML(text) + '</option>';
       }).join('') + '</select></div>';
   }
+
+  function paymentOptions() {
+    const saved = state.savedCards.map(function (card) {
+      return { id: card.id, label: card.brand + ' •••• ' + card.last4 };
+    });
+    return [
+      { id: 'cash', label: 'Cash after completion' },
+      { id: 'qr', label: 'QR Pay after completion' }
+    ].concat(saved).concat([{ id: 'new-card', label: '+ Add new bank card' }]);
+  }
+  function paymentMethodLabel(id) {
+    if (id === 'cash') return 'Cash after completion';
+    if (id === 'qr') return 'QR Pay after completion';
+    if (id === 'new-card') return 'New bank card';
+    const card = state.savedCards.find(function (item) { return item.id === id; });
+    return card ? card.brand + ' •••• ' + card.last4 : 'Not selected';
+  }
+  function paymentSelector(selected) {
+    return '<div class="payment-panel">' +
+      '<h3>Payment Method</h3>' +
+      '<p class="help-text">Choose the payment method before sending the request. Cash and QR are confirmed after the service is completed.</p>' +
+      select('paymentMethod', 'Payment Method', paymentOptions(), selected || 'cash') +
+      '<div id="newCardFields" class="new-card-fields hidden">' +
+        input('cardHolder', 'Card Holder Name', 'text', 'Ahmed Kamal', 'Name on card') +
+        input('cardNumber', 'Card Number', 'text', '', '4111 2222 3333 4444') +
+        input('cardExpiry', 'Expiry Date', 'text', '', 'MM/YY') +
+      '</div>' +
+    '</div>';
+  }
+  function toggleNewCardFields() {
+    const method = el('paymentMethod');
+    const cardFields = el('newCardFields');
+    if (method && cardFields) cardFields.classList.toggle('hidden', method.value !== 'new-card');
+  }
+  function collectPaymentDetails() {
+    const method = el('paymentMethod') ? el('paymentMethod').value : 'cash';
+    if (method === 'new-card') {
+      const holder = el('cardHolder') ? el('cardHolder').value.trim() : '';
+      const number = el('cardNumber') ? el('cardNumber').value.replace(/\D/g, '') : '';
+      const expiry = el('cardExpiry') ? el('cardExpiry').value.trim() : '';
+      if (!holder || number.length < 12 || !expiry) {
+        toast('Please enter valid card holder, number and expiry date.', 'danger');
+        return null;
+      }
+      const last4 = number.slice(-4);
+      const brand = /^5/.test(number) ? 'Mastercard' : 'Visa';
+      const card = { id: 'card-' + last4 + '-' + Date.now(), brand: brand, last4: last4, holder: holder, expiry: expiry };
+      state.savedCards.push(card);
+      toast('New bank card saved: ' + brand + ' •••• ' + last4, 'success');
+      return { id: card.id, label: brand + ' •••• ' + last4, type: 'card' };
+    }
+    const type = method === 'cash' ? 'cash' : method === 'qr' ? 'qr' : 'card';
+    return { id: method, label: paymentMethodLabel(method), type: type };
+  }
   function summaryLine(label, value, className) {
     return '<div class="summary-line ' + (className || '') + '"><span>' + escapeHTML(label) + '</span><strong>' + escapeHTML(value) + '</strong></div>';
   }
@@ -156,34 +211,34 @@
   function navigationItems() {
     if (!state.activeUser) {
       return [
-        { route: 'home', label: 'Welcome', icon: '⌂', public: true },
-        { route: 'ride', label: 'Ride Booking', icon: '⌖', locked: true },
-        { route: 'delivery', label: 'Delivery Services', icon: '▣', locked: true },
-        { route: 'driver', label: 'Driver Mode', icon: '♢', locked: true },
-        { route: 'admin', label: 'Admin Monitor', icon: '◆', locked: true }
+        { route: 'home', label: 'Welcome', icon: '🏠', public: true },
+        { route: 'ride', label: 'Ride Booking', icon: '🚕', locked: true },
+        { route: 'delivery', label: 'Delivery Services', icon: '📦', locked: true },
+        { route: 'driver', label: 'Driver Mode', icon: '🚗', locked: true },
+        { route: 'admin', label: 'Admin Monitor', icon: '🛡️', locked: true }
       ];
     }
     if (isStudent()) {
       return [
-        { route: 'home', label: 'Home', icon: '⌂' },
-        { route: 'ride', label: 'Ride', icon: '⌖' },
-        { route: 'delivery', label: 'Delivery', icon: '▣' },
-        { route: 'history', label: 'History', icon: '◷' },
-        { route: 'profile', label: 'Profile', icon: '◉' }
+        { route: 'home', label: 'Home', icon: '🏠' },
+        { route: 'ride', label: 'Ride', icon: '🚕' },
+        { route: 'delivery', label: 'Delivery', icon: '📦' },
+        { route: 'history', label: 'History', icon: '📋' },
+        { route: 'profile', label: 'Profile', icon: '👤' }
       ];
     }
     if (isDriver()) {
       return [
-        { route: 'home', label: 'Home', icon: '⌂' },
-        { route: 'driver', label: 'Jobs', icon: '♢' },
-        { route: 'history', label: 'Earnings', icon: 'RM' },
-        { route: 'profile', label: 'Profile', icon: '◉' }
+        { route: 'home', label: 'Home', icon: '🏠' },
+        { route: 'driver', label: 'Jobs', icon: '🧾' },
+        { route: 'history', label: 'Earnings', icon: '💰' },
+        { route: 'profile', label: 'Profile', icon: '👤' }
       ];
     }
     return [
-      { route: 'home', label: 'Home', icon: '⌂' },
-      { route: 'admin', label: 'Monitor', icon: '◆' },
-      { route: 'profile', label: 'Profile', icon: '◉' }
+      { route: 'home', label: 'Home', icon: '🏠' },
+      { route: 'admin', label: 'Monitor', icon: '📊' },
+      { route: 'profile', label: 'Profile', icon: '👤' }
     ];
   }
 
@@ -199,7 +254,7 @@
     if (tabs) {
       tabs.style.gridTemplateColumns = 'repeat(' + items.length + ', 1fr)';
       tabs.innerHTML = items.map(function (item) {
-        return '<button type="button" data-route="' + item.route + '" class="tab ' + (item.locked ? 'locked ' : '') + (item.route === activeRoute ? 'active' : '') + '"><span>' + escapeHTML(item.icon) + '</span>' + escapeHTML(item.label) + '</button>';
+        return '<button type="button" data-route="' + item.route + '" class="tab ' + (item.locked ? 'locked ' : '') + (item.route === activeRoute ? 'active' : '') + '"><span class="tab-icon">' + escapeHTML(item.icon) + '</span><span class="tab-label">' + escapeHTML(item.label) + '</span></button>';
       }).join('');
     }
   }
@@ -241,7 +296,7 @@
   window.HopprState = state;
   window.HopprUI = {
     el, qs, qsa, money, escape: escapeHTML, createId, validUtmEmail, setTitle, toast,
-    input, textArea, select, summaryLine, timeline, map, exampleRoutes, shell,
+    input, textArea, select, paymentSelector, toggleNewCardFields, collectPaymentDetails, paymentMethodLabel, summaryLine, timeline, map, exampleRoutes, shell,
     isStudent, isDriver, isAdmin, canAccess, showAuthModal, hideAuthModal, requireUser,
     roleDenied, renderNavigation
   };

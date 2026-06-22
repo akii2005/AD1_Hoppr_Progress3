@@ -16,9 +16,13 @@
         '<div class="role-chip-row"><span class="role-chip">Student rides</span><span class="role-chip">Parcel delivery</span><span class="role-chip">Food delivery</span><span class="role-chip">Driver jobs</span></div>' +
         '<div class="button-row"><button class="primary-btn" type="button" data-route="auth" data-auth-mode="login">Log In</button><button class="secondary-btn" type="button" data-route="auth" data-auth-mode="register">Sign Up</button></div>' +
       '</div>' +
-      window.HopprUI.map('UTM Campus Service Map', 'Example route: Kolej Tun Razak → Faculty of Computing', 'Kolej Tun Razak', 'Faculty of Computing') +
-      '<h3 class="section-title">Example UTM Routes</h3>' + window.HopprUI.exampleRoutes(4) +
-      '<div class="auth-prompt"><div class="modal-icon">🔐</div><strong>Protected prototype</strong><p class="help-text">Try pressing Ride, Delivery, Driver or Admin before logging in. A sign-in prompt will appear.</p></div>' +
+      '<div class="auth-prompt"><div class="modal-icon">🔐</div><strong>Protected prototype</strong><p class="help-text">Ride, Delivery, Driver, Admin and Profile screens are locked until the user signs in with a verified UTM account.</p></div>' +
+      '<div class="grid-2">' +
+        featureNote('🚕', 'Campus Ride Booking', 'Select pickup and drop-off locations, choose vehicle type and payment method, then request a driver.') +
+        featureNote('💳', 'Payment Before Request', 'The user selects Cash, QR, saved card, or adds a new card before confirming any service.') +
+        featureNote('📦', 'Parcel and Food Delivery', 'Delivery forms include location details, order information and payment method selection.') +
+        featureNote('🛡️', 'Role-Based Access', 'Students, drivers and admins each see their own bottom navigation and features only.') +
+      '</div>' +
     '</div>';
   }
 
@@ -32,13 +36,12 @@
         metric('Active Ride', activeRide ? '1' : '0', activeRide ? activeRide.status : 'No active trip') +
         metric('Delivery', delivery ? '1' : '0', delivery ? delivery.status : 'No active order') +
       '</div>' +
-      window.HopprUI.map('UTM Student Route Map', 'Live route preview for ride and delivery booking', 'Kolej Tun Razak', 'Faculty of Computing') +
       '<h3 class="section-title">Campus Services</h3>' +
       '<div class="grid-2">' +
-        serviceCard('ride', '🚕', 'Ride Booking', 'Request a campus ride, view fare, track driver and pay.') +
-        serviceCard('delivery', '📦', 'Delivery Services', 'Book parcel or food delivery with live status updates.') +
-        serviceCard('history', '◷', 'History & Payment', 'Review completed bookings and fare records.') +
-        serviceCard('profile', '◉', 'Profile & Settings', 'Update phone, faculty, theme and notifications.') +
+        serviceCard('ride', '🚕', 'Ride Booking', 'Request a campus ride, choose payment before booking, and track status.') +
+        serviceCard('delivery', '📦', 'Delivery Services', 'Book parcel or food delivery with payment method selection.') +
+        serviceCard('history', '📋', 'History & Payment', 'Review completed bookings and payment records.') +
+        serviceCard('profile', '👤', 'Profile & Settings', 'Update phone, faculty, theme and notifications.') +
       '</div>' +
       '<h3 class="section-title">Notifications</h3>' + notificationList() +
     '</div>';
@@ -52,12 +55,11 @@
         metric('Waiting Jobs', String(window.HopprState.driverJobs.length), 'Ride / parcel / food') +
         metric('Accepted', String(window.HopprState.acceptedJobs.length), 'Trip execution') +
       '</div>' +
-      window.HopprUI.map('Nearby Job Broadcast Map', 'Sample job: UTM Library → Kolej Rahman Putra', 'UTM Library', 'Kolej Rahman Putra') +
       '<h3 class="section-title">Driver Shortcuts</h3>' +
       '<div class="grid-2">' +
-        serviceCard('driver', '♢', 'Driver Dashboard', 'Go online, accept or decline jobs and complete trips.') +
-        serviceCard('history', 'RM', 'Earnings Summary', 'Review completed services and payment records.') +
-        serviceCard('profile', '◉', 'Driver Profile', 'Manage account and vehicle details.') +
+        serviceCard('driver', '🧾', 'Driver Dashboard', 'Go online, accept or decline jobs and complete trips.') +
+        serviceCard('history', '💰', 'Earnings Summary', 'Review completed services and payment records.') +
+        serviceCard('profile', '👤', 'Driver Profile', 'Manage account and vehicle details.') +
       '</div>' + notificationList() +
     '</div>';
   }
@@ -70,9 +72,8 @@
         metric('Reports', String(window.HopprData.complaints.length), 'Complaints') +
         metric('Status', 'Live', 'Monitoring') +
       '</div>' +
-      window.HopprUI.map('UTM Activity Monitoring Map', 'Admin overview for ride and delivery activity', 'Dewan Sultan Iskandar', 'Faculty of Computing') +
       '<h3 class="section-title">Admin Shortcuts</h3>' +
-      '<div class="grid-2">' + serviceCard('admin', '◆', 'Admin Monitor', 'Verify accounts, monitor jobs and handle complaints.') + serviceCard('profile', '◉', 'Profile', 'Manage admin account settings.') + '</div>' +
+      '<div class="grid-2">' + serviceCard('admin', '📊', 'Admin Monitor', 'Verify accounts, monitor jobs and handle complaints.') + serviceCard('profile', '👤', 'Profile', 'Manage admin account settings.') + '</div>' +
     '</div>';
   }
 
@@ -82,6 +83,9 @@
   function serviceCard(route, icon, title, description) {
     return '<button class="service-card" type="button" data-route="' + route + '"><span class="icon">' + icon + '</span><h3>' + window.HopprUI.escape(title) + '</h3><p>' + window.HopprUI.escape(description) + '</p></button>';
   }
+  function featureNote(icon, title, description) {
+    return '<div class="feature-note"><span class="icon">' + icon + '</span><strong>' + window.HopprUI.escape(title) + '</strong><p>' + window.HopprUI.escape(description) + '</p></div>';
+  }
   function notificationList() {
     return '<div class="list-card">' + window.HopprState.notifications.slice(0, 4).map(function (note, index) {
       return '<div class="list-row"><div class="row-icon">' + (index + 1) + '</div><div class="row-main"><strong>In-app alert</strong><span>' + window.HopprUI.escape(note) + '</span></div><span class="badge success">New</span></div>';
@@ -90,19 +94,6 @@
 
   function bindGlobalNavigation() {
     document.addEventListener('click', function (event) {
-      const routeExample = event.target.closest('[data-example-route]');
-      if (routeExample && window.HopprState.currentRoute !== 'ride') {
-        event.preventDefault();
-        const routeId = routeExample.getAttribute('data-example-route');
-        if (!window.HopprState.activeUser) {
-          window.HopprUI.showAuthModal('ride');
-        } else if (!window.HopprUI.isStudent()) {
-          window.HopprUI.roleDenied('ride');
-        } else {
-          window.HopprRouter.go('ride', { exampleRoute: routeId });
-        }
-        return;
-      }
       const demo = event.target.closest('[data-demo-email]');
       if (demo && !demo.closest('#app')) {
         event.preventDefault();
@@ -139,10 +130,18 @@
     if (modalHome) modalHome.addEventListener('click', function () { window.HopprUI.hideAuthModal(); window.HopprRouter.go('home'); });
   }
 
+  function hideBootLoader() {
+    const loader = window.HopprUI.el('bootLoader');
+    if (!loader) return;
+    setTimeout(function () { loader.classList.add('hide'); }, 850);
+    setTimeout(function () { if (loader.remove) loader.remove(); }, 1350);
+  }
+
   function init() {
     window.HopprRouter.register('home', homeScreen);
     bindGlobalNavigation();
     window.HopprRouter.go('home');
+    hideBootLoader();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

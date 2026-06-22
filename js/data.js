@@ -52,6 +52,15 @@
       { id: 'express', label: 'Express', multiplier: 1.25, note: 'Priority nearby driver' },
       { id: 'night-safe', label: 'Night Safe', multiplier: 1.4, note: 'Extra trusted late-night option' }
     ],
+    paymentMethods: [
+      { id: 'cash', label: 'Cash after completion', type: 'post', note: 'Pay the driver after the ride or delivery is completed.' },
+      { id: 'qr', label: 'QR Pay after completion', type: 'post', note: 'Scan the QR code after the service is completed.' },
+      { id: 'new-card', label: '+ Add new bank card', type: 'new-card', note: 'Register a new card for future orders.' }
+    ],
+    savedCards: [
+      { id: 'card-visa-2468', brand: 'Visa', last4: '2468', holder: 'Ahmed Kamal', expiry: '08/28' },
+      { id: 'card-master-8921', brand: 'Mastercard', last4: '8921', holder: 'Ahmed Kamal', expiry: '12/27' }
+    ],
     users: [
       {
         id: 1,

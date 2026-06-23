@@ -12,6 +12,7 @@
         window.HopprUI.select('pickupLocation', 'Pickup Location', window.HopprData.locations, from) +
         window.HopprUI.select('dropoffLocation', 'Destination', window.HopprData.locations, to) +
         '<div class="grid-2">' + window.HopprUI.select('vehicleType', 'Vehicle Type', window.HopprData.vehicleTypes, 'car') + window.HopprUI.select('rideTier', 'Service Tier', window.HopprData.tiers, 'standard') + '</div>' +
+        window.HopprUI.select('ridePaymentMethod', 'Payment Method', paymentOptions(), 'Cash after completion') +
         '<div id="farePreview" class="summary-card">' + fareSummary(calculateFare(from, to)) + '</div>' +
         '<button class="primary-btn" type="submit">Confirm Ride Request</button>' +
       '</form>' + activeBox + historyPreview()
@@ -32,6 +33,30 @@
     return { pickup: pickup, dropoff: dropoff, vehicle: vehicle, tier: tier, distance: distance, minutes: minutes, fee: fee };
   }
 
+  function paymentOptions() {
+    return [
+      'Cash after completion',
+      'QR Pay after completion',
+      'Visa •••• 2468',
+      'Mastercard •••• 8921',
+      'Add new bank card'
+    ];
+  }
+
+  function resolvePaymentMethod(fieldId) {
+    const field = window.HopprUI.el(fieldId);
+    let method = field ? field.value : 'Cash after completion';
+    if (method === 'Add new bank card') {
+      const last4 = prompt('Enter last 4 digits of the new card:', '1234') || '1234';
+      method = 'New Bank Card •••• ' + last4.slice(-4);
+    }
+    return method;
+  }
+
+  function isAfterCompletionPayment(method) {
+    return method === 'Cash after completion' || method === 'QR Pay after completion';
+  }
+
   function fareSummary(info) {
     return window.HopprUI.summaryLine('Route', info.pickup + ' → ' + info.dropoff) +
       window.HopprUI.summaryLine('Vehicle / Tier', info.vehicle.label + ' / ' + info.tier.label) +
@@ -40,10 +65,12 @@
   }
 
   function activeRideCard(ride) {
+    const isCompleted = ride.status === 'Completed';
     return '<div class="list-card">' +
-      '<div class="list-row"><div class="row-icon">🚗</div><div class="row-main"><strong>' + window.HopprUI.escape(ride.id) + '</strong><span>' + window.HopprUI.escape(ride.pickup) + ' → ' + window.HopprUI.escape(ride.dropoff) + '</span></div><span class="badge warning">' + window.HopprUI.escape(ride.status) + '</span></div>' +
-      '<div style="padding:14px;" class="button-row"><button type="button" id="trackRide" class="secondary-btn">Track Ride</button><button type="button" id="payRide" class="primary-btn">Pay Fare</button><button type="button" id="cancelRide" class="danger-btn">Cancel</button></div>' +
-      '</div>';
+      '<div class="list-row"><div class="row-icon">🚗</div><div class="row-main"><strong>' + window.HopprUI.escape(ride.id) + '</strong><span>' + window.HopprUI.escape(ride.pickup) + ' → ' + window.HopprUI.escape(ride.dropoff) + '</span></div><span class="badge ' + (isCompleted ? 'success' : 'warning') + '">' + window.HopprUI.escape(ride.status) + '</span></div>' +
+      '<div style="padding:14px;" class="button-row"><button type="button" id="trackRide" class="secondary-btn">Track Ride</button>' +
+      (isCompleted ? '<button type="button" id="doneRide" class="primary-btn">Done</button>' : '<button type="button" id="cancelRide" class="danger-btn">Cancel</button>') +
+      '</div></div>';
   }
 
   function historyPreview() {
@@ -88,7 +115,8 @@
         id: window.HopprUI.createId('R'), pickup: info.pickup, dropoff: info.dropoff,
         vehicle: info.vehicle.label, tier: info.tier.label, fee: info.fee,
         distance: info.distance.toFixed(1) + ' km', eta: info.minutes + ' min',
-        driver: 'Tanzid Uddin', status: 'Driver Assigned', paid: false
+        driver: 'Tanzid Uddin', status: 'Driver Assigned', paid: false,
+        paymentMethod: resolvePaymentMethod('ridePaymentMethod')
       };
       window.HopprState.activeRide = ride;
       window.HopprState.notifications.unshift('Ride ' + ride.id + ' assigned to ' + ride.driver + '.');
@@ -97,8 +125,8 @@
     });
     const track = window.HopprUI.el('trackRide');
     if (track) track.addEventListener('click', function () { window.HopprRouter.go('rideTracking'); });
-    const pay = window.HopprUI.el('payRide');
-    if (pay) pay.addEventListener('click', function () { window.HopprRouter.go('payment'); });
+    const done = window.HopprUI.el('doneRide');
+    if (done) done.addEventListener('click', function () { window.HopprRouter.go('payment'); });
     const cancel = window.HopprUI.el('cancelRide');
     if (cancel) cancel.addEventListener('click', function () {
       window.HopprState.activeRide = null;
@@ -120,15 +148,35 @@
     const steps = ['Request Created', 'Driver Assigned', 'Driver Arriving', 'Trip Started', 'Completed'];
     const current = Math.max(0, steps.indexOf(ride.status));
     const showMap = ['Driver Arriving', 'Trip Started', 'Completed'].indexOf(ride.status) !== -1;
+    const isCompleted = ride.status === 'Completed';
 
     const mapSection = showMap
       ? window.HopprUI.map(
-          'Driver location on UTM map',
-          ride.driver + ' is heading from ' + ride.pickup + ' to ' + ride.dropoff,
+          isCompleted ? 'Completed ride route' : 'Driver location on UTM map',
+          isCompleted
+            ? 'Thank you for riding with Hoppr. Your route was from ' + ride.pickup + ' to ' + ride.dropoff + '.'
+            : ride.driver + ' is heading from ' + ride.pickup + ' to ' + ride.dropoff,
           ride.pickup,
           ride.dropoff
         )
       : '<div class="empty-card"><strong>Map not available yet</strong>The map will appear when the driver starts arriving.</div>';
+
+    const paymentMethod = ride.paymentMethod || 'Cash after completion';
+    const completionMessage = isAfterCompletionPayment(paymentMethod)
+      ? 'Your ride has been completed successfully. Please proceed to payment using ' + paymentMethod + '.'
+      : 'Your ride has been completed successfully. The payment method selected for this trip is ' + paymentMethod + '.';
+
+    const completionCard = isCompleted
+      ? '<div class="summary-card">' +
+          '<h3 style="margin:0 0 8px;">Thank you for riding with Hoppr</h3>' +
+          '<p style="margin:0 0 12px;color:var(--muted);">' + window.HopprUI.escape(completionMessage) + '</p>' +
+          '<div class="button-row"><button id="doneRideTracking" class="primary-btn" type="button">Done</button></div>' +
+        '</div>'
+      : '';
+
+    const actionButtons = isCompleted
+      ? ''
+      : '<div class="button-row"><button id="advanceRide" class="primary-btn" type="button">Next Status</button></div>';
 
     return window.HopprUI.shell('Live Ride Tracking', 'Real-time driver visibility and trip status for the passenger.',
       mapSection +
@@ -136,10 +184,12 @@
         window.HopprUI.summaryLine('Ride ID', ride.id) +
         window.HopprUI.summaryLine('Driver', ride.driver) +
         window.HopprUI.summaryLine('Vehicle / Tier', ride.vehicle + ' / ' + ride.tier) +
+        window.HopprUI.summaryLine('Payment Method', ride.paymentMethod || 'Cash after completion') +
         window.HopprUI.summaryLine('Fare', window.HopprUI.money(ride.fee), 'total') +
       '</div>' +
       window.HopprUI.timeline(steps, current) +
-      '<div class="button-row"><button id="advanceRide" class="primary-btn" type="button">Next Status</button><button id="paymentFromTracking" class="secondary-btn" type="button">Payment</button></div>'
+      completionCard +
+      actionButtons
     );
   }
 
@@ -153,27 +203,43 @@
       ride.status = steps[next];
       if (ride.status === 'Completed') {
         window.HopprState.rideHistory.unshift({ id: ride.id, type: 'Ride', route: ride.pickup + ' → ' + ride.dropoff, date: 'Today, just now', fare: ride.fee, status: 'Completed' });
-        window.HopprUI.toast('Ride completed. Payment confirmation is ready.', 'success');
+        window.HopprUI.toast('Ride completed. Please proceed to payment if using Cash or QR.', 'success');
       } else {
         window.HopprUI.toast('Ride status updated: ' + ride.status, 'success');
       }
       window.HopprRouter.go('rideTracking');
     });
-    const payment = window.HopprUI.el('paymentFromTracking');
-    if (payment) payment.addEventListener('click', function () { window.HopprRouter.go('payment'); });
+
+    const done = window.HopprUI.el('doneRideTracking');
+    if (done) done.addEventListener('click', function () {
+      window.HopprUI.toast('Thank you for riding with Hoppr. Please proceed to payment.', 'success');
+      window.HopprRouter.go('payment');
+    });
   }
 
   function paymentScreen() {
-    const ride = window.HopprState.activeRide || { id: 'R-DEMO', pickup: 'Kolej Tun Razak', dropoff: 'Faculty of Computing', fee: 4.8, status: 'Completed' };
-    return window.HopprUI.shell('Payment and Fare Summary', 'Display fare summary and record payment confirmation after ride or delivery completion.',
+    const ride = window.HopprState.activeRide;
+    if (!ride || ride.status !== 'Completed') {
+      return window.HopprUI.shell('Payment', 'Payment is available after ride completion.',
+        '<div class="empty-card"><strong>No completed ride yet</strong>Complete the ride first, then press Done to proceed to payment.</div>'
+      );
+    }
+
+    const method = ride.paymentMethod || 'Cash after completion';
+    const instruction = isAfterCompletionPayment(method)
+      ? 'Please proceed to payment using ' + method + '.'
+      : 'Payment method was selected before the ride request: ' + method + '.';
+
+    return window.HopprUI.shell('Payment Confirmation', 'Payment method was selected during ride request.',
       '<div class="summary-card">' +
+        '<h3 style="margin:0 0 8px;">Thank you for riding with Hoppr</h3>' +
+        '<p style="margin:0 0 12px;color:var(--muted);">' + window.HopprUI.escape(instruction) + '</p>' +
         window.HopprUI.summaryLine('Booking ID', ride.id) +
-        window.HopprUI.summaryLine('Pickup', ride.pickup) +
-        window.HopprUI.summaryLine('Drop-off', ride.dropoff) +
+        window.HopprUI.summaryLine('Route', ride.pickup + ' → ' + ride.dropoff) +
+        window.HopprUI.summaryLine('Selected Payment', method) +
         window.HopprUI.summaryLine('Service Fee', window.HopprUI.money(ride.fee), 'total') +
       '</div>' +
       '<form id="paymentForm" class="form-card">' +
-        window.HopprUI.select('paymentMethod', 'Payment Method', ['Cash', 'E-Wallet', 'Debit/Credit Card'], 'Cash') +
         '<button class="primary-btn" type="submit">Confirm Payment</button>' +
       '</form>'
     );
@@ -184,7 +250,7 @@
     if (form) form.addEventListener('submit', function (event) {
       event.preventDefault();
       if (window.HopprState.activeRide) window.HopprState.activeRide.paid = true;
-      window.HopprUI.toast('Payment recorded successfully.', 'success');
+      window.HopprUI.toast('Payment recorded successfully. Thank you for riding with Hoppr.', 'success');
       window.HopprRouter.go('history');
     });
   }
